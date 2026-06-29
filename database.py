@@ -1,9 +1,11 @@
 from pathlib import Path
 import hashlib
+import shutil
 import sqlite3
 
 DB_DIR = Path("data")
 DB_FILE = DB_DIR / "skb.db"
+PDF_STORAGE_DIR = Path("storage") / "pdf"
 
 
 def create_database():
@@ -51,6 +53,7 @@ def import_pdfs(import_dir):
         raise NotADirectoryError(f"Caminho nao e diretorio: {directory}")
 
     create_database()
+    PDF_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
     pdf_files = sorted(
         path for path in directory.rglob("*")
@@ -70,7 +73,11 @@ def import_pdfs(import_dir):
     for pdf_file in pdf_files:
         resolved_pdf = pdf_file.resolve()
         sha256 = _file_sha256(resolved_pdf)
-        url = f"file://{resolved_pdf.as_posix()}"
+        destination_pdf = PDF_STORAGE_DIR / f"{sha256}.pdf"
+        url = f"local://{sha256}"
+
+        if not destination_pdf.exists():
+            shutil.copy2(resolved_pdf, destination_pdf)
 
         cur.execute(
             """
@@ -79,10 +86,10 @@ def import_pdfs(import_dir):
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
-                resolved_pdf.stem,
+                resolved_pdf.name,
                 "local",
                 url,
-                str(resolved_pdf),
+                str(destination_pdf),
                 None,
                 sha256,
             ),
