@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 
+from crawler import DEFAULT_CONITEC_URL, discover_pdf_urls, save_pdf_manifest
 from database import init_db, search_documents
-from importer import import_local_pdfs
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -13,6 +14,8 @@ DB_PATH = STORAGE_ROOT / "skb.db"
 IMPORT_DIR = STORAGE_ROOT / "import"
 PDF_DIR = STORAGE_ROOT / "pdf"
 TEXT_DIR = STORAGE_ROOT / "text"
+CRAWL_DIR = STORAGE_ROOT / "crawl"
+CONITEC_MANIFEST = CRAWL_DIR / "conitec_pdfs.txt"
 
 
 def build_cli() -> argparse.ArgumentParser:
@@ -31,6 +34,20 @@ def build_cli() -> argparse.ArgumentParser:
     )
     search_cmd.add_argument("query", help="Termo de pesquisa")
     search_cmd.add_argument("--limit", type=int, default=10, help="Limite de resultados")
+
+    crawl_cmd = subparsers.add_parser(
+        "crawl-conitec", help="Descobre links PDF na página da CONITEC"
+    )
+    crawl_cmd.add_argument(
+        "--url",
+        default=DEFAULT_CONITEC_URL,
+        help="URL inicial para descoberta de links PDF",
+    )
+    crawl_cmd.add_argument(
+        "--output",
+        default=str(CONITEC_MANIFEST),
+        help="Arquivo para salvar a lista de URLs PDF",
+    )
 
     return parser
 
@@ -57,6 +74,8 @@ def cmd_init_db() -> int:
 
 
 def cmd_import() -> int:
+    from importer import import_local_pdfs
+
     result = import_local_pdfs(
         db_path=DB_PATH,
         import_dir=IMPORT_DIR,
@@ -69,6 +88,7 @@ def cmd_import() -> int:
 
 
 def cmd_search(query: str, limit: int) -> int:
+    init_db(DB_PATH)
     rows = list(search_documents(DB_PATH, query=query, limit=limit))
     if not rows:
         print("Nenhum resultado encontrado.")
@@ -83,6 +103,20 @@ def cmd_search(query: str, limit: int) -> int:
     return 0
 
 
+def cmd_crawl_conitec(url: str, output: str) -> int:
+    try:
+        result = discover_pdf_urls(url)
+    except (URLError, HTTPError) as error:
+        print(f"Falha ao acessar fonte da CONITEC: {error}")
+        return 1
+
+    output_path = save_pdf_manifest(result.pdf_urls, output)
+    print(f"Fonte: {result.source_url}")
+    print(f"PDFs encontrados: {len(result.pdf_urls)}")
+    print(f"Manifesto salvo em: {output_path}")
+    return 0
+
+
 def main() -> int:
     args = build_cli().parse_args()
     if args.command == "init-db":
@@ -91,6 +125,8 @@ def main() -> int:
         return cmd_import()
     if args.command == "search":
         return cmd_search(args.query, args.limit)
+    if args.command == "crawl-conitec":
+        return cmd_crawl_conitec(args.url, args.output)
     raise ValueError(f"Comando não suportado: {args.command}")
 
 
