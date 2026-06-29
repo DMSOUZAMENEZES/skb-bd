@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+
+storage/skb.db
+storage/pdf/*
+storage/text/*
+storage/crawl/*
+!storage/pdf/.gitkeep
+!storage/text/.gitkeep
+!storage/crawl/.gitkeep
