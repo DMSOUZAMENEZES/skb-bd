@@ -4,6 +4,61 @@ Repositório de referência rápida para organizar informações sobre **Protoco
 
 > Este material é informativo e não substitui os documentos oficiais do Ministério da Saúde, a avaliação clínica individual ou as normas vigentes publicadas em portarias.
 
+## Estado atual
+
+- `database.py` implementado: cria `data/skb.db` com tabela `documents` e diretórios `storage/pdf`, `storage/text`, `imports`
+- `app.py` implementado: comando `init` funcional via `python app.py init`
+- Comandos `sync`, `search` e `ask` ainda não implementados
+
+## Próxima tarefa
+
+Implementar `sync`: descobrir documentos novos na página da CONITEC, baixar PDFs e registrar na tabela `documents`.
+
+**Blocker crítico desta etapa:** `sync` precisa estar funcional antes de qualquer trabalho em `search` ou `ask`.
+
+## Critérios de Aceitação
+
+### `sync`
+
+- Descobre e baixa pelo menos 10 documentos PDF da CONITEC sem erros
+- Registra cada documento na tabela `documents` com `filename` e `imported_at`
+- Não duplica documentos já existentes (reexecução idempotente)
+- Conclui para uma base de até 500 documentos em menos de 10 minutos
+
+### `search`
+
+- Retorna resultados em menos de 500 ms para uma base com até 500 documentos
+- Usa SQLite FTS5 como motor de busca
+- Retorna ao menos o `filename` e um trecho (`snippet`) do texto relevante por resultado
+
+### `ask`
+
+- Usa OpenAI API para gerar a resposta
+- A resposta identifica o documento-fonte (nome do arquivo ou título)
+- Responde em menos de 30 segundos para consultas de texto simples
+- Retorna mensagem de erro clara quando nenhum documento relevante é encontrado
+
+## Restrições não negociáveis
+
+- Python 3.11+
+- SQLite FTS5 nativo como motor de busca (sem dependência de banco externo)
+- Agente de resposta: OpenAI API
+- Extração de PDF: PyMuPDF (já em `requirements.txt`)
+- Sem abstrações antecipadas — só o que tem uso imediato
+
+## Hierarquia de dependências do MVP
+
+```
+1. Descobrir documentos   ← blocker de tudo
+2. Baixar PDFs novos      ← blocker de 3–6
+3. Extrair texto (PDF → txt)  ← blocker de 4–6
+4. Armazenar em SQLite    ← blocker de 5–6
+5. Pesquisa rápida (search)   ← blocker de 6
+6. Agente de resposta (ask)   ← entregável final
+```
+
+Trabalhe sempre na menor etapa desbloqueada. Não avance para uma etapa superior sem que a anterior tenha critério de aceitação satisfeito.
+
 ## Objetivo
 
 - Centralizar links oficiais para consulta de protocolos e diretrizes do SUS.
