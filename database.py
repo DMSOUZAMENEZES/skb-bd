@@ -1,7 +1,7 @@
+from pathlib import Path
 import sqlite3
-import os
 
-DB_PATH = os.path.join("data", "skb.db")
+DB_PATH = Path("data") / "skb.db"
 
 
 def get_connection():
@@ -9,18 +9,23 @@ def get_connection():
 
 
 def init_db():
-    os.makedirs("data", exist_ok=True)
-    os.makedirs(os.path.join("storage", "pdf"), exist_ok=True)
-    os.makedirs(os.path.join("storage", "text"), exist_ok=True)
-    os.makedirs("imports", exist_ok=True)
+    Path("data").mkdir(parents=True, exist_ok=True)
+    Path("storage/pdf").mkdir(parents=True, exist_ok=True)
+    Path("storage/text").mkdir(parents=True, exist_ok=True)
+    Path("imports").mkdir(parents=True, exist_ok=True)
 
     conn = get_connection()
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS documents (
-            id       INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT NOT NULL UNIQUE,
-            imported_at TEXT NOT NULL DEFAULT (datetime('now'))
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            source TEXT NOT NULL,
+            url TEXT UNIQUE,
+            pdf_path TEXT,
+            text_path TEXT,
+            sha256 TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
