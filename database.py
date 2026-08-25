@@ -31,3 +31,39 @@ def init_db():
     )
     conn.commit()
     conn.close()
+
+
+def document_exists_by_hash(sha256_value: str) -> bool:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM documents WHERE sha256 = ? LIMIT 1",
+        (sha256_value,),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
+def insert_document(
+    title: str,
+    source: str,
+    pdf_path: str,
+    sha256: str,
+    url: str | None = None,
+) -> int:
+    conn = get_connection()
+    cursor = conn.execute(
+        """
+        INSERT INTO documents (title, source, url, pdf_path, sha256)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (title, source, url, pdf_path, sha256),
+    )
+    conn.commit()
+    document_id = cursor.lastrowid
+    conn.close()
+    return document_id
+
+
+if __name__ == "__main__":
+    init_db()
+    print(f"Banco criado: {DB_PATH}")
